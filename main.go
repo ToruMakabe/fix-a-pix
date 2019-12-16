@@ -53,6 +53,11 @@ func fix() int {
 	return 0
 }
 
+// makeCNFは入力された問題をCNFに変換する.
+func makeCNF(s /* input */ [][]string) ([][]string, error) {
+	return s, nil
+}
+
 // parseProblemはfix-a-pixの問題ファイルを受け取り, 形式を検証する.
 func parseProblem(fn /* filename */ string) ([][]string, error) {
 	re := regexp.MustCompile("[0-9]|.")
@@ -74,11 +79,7 @@ func parseProblem(fn /* filename */ string) ([][]string, error) {
 			if !re.MatchString(n) {
 				return nil, fmt.Errorf(inputFormatMsg)
 			}
-			if n == "." {
-				s = append(s, "")
-			} else {
-				s = append(s, n)
-			}
+			s = append(s, n)
 		}
 		input = append(input, s)
 	}
