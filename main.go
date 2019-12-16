@@ -53,8 +53,8 @@ func fix() int {
 	return 0
 }
 
-// makeCNFは入力された問題をCNFに変換する.
-func makeCNF(s /* input */ [][]string) ([][]string, error) {
+// convCNFは入力された問題をCNFに変換する.
+func convCNF(s /* input */ [][]string) ([][]string, error) {
 	return s, nil
 }
 
