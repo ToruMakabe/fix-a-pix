@@ -1,0 +1,217 @@
+
+state 0
+	$accept: .formula $end 
+
+	ATOMIC  shift 3
+	'~'  shift 9
+	'('  shift 10
+	.  error
+
+	formula  goto 1
+	expr  goto 2
+	and_expr  goto 4
+	or_expr  goto 5
+	not_expr  goto 7
+	imply_expr  goto 6
+	parenth_expr  goto 8
+
+state 1
+	$accept:  formula.$end 
+
+	$end  accept
+	.  error
+
+
+state 2
+	formula:  expr.    (1)
+	and_expr:  expr.'&' expr 
+	or_expr:  expr.'|' expr 
+	imply_expr:  expr.'>' expr 
+
+	'>'  shift 13
+	'&'  shift 11
+	'|'  shift 12
+	.  reduce 1 (src line 51)
+
+
+state 3
+	expr:  ATOMIC.    (2)
+
+	.  reduce 2 (src line 58)
+
+
+state 4
+	expr:  and_expr.    (3)
+
+	.  reduce 3 (src line 63)
+
+
+state 5
+	expr:  or_expr.    (4)
+
+	.  reduce 4 (src line 64)
+
+
+state 6
+	expr:  imply_expr.    (5)
+
+	.  reduce 5 (src line 65)
+
+
+state 7
+	expr:  not_expr.    (6)
+
+	.  reduce 6 (src line 66)
+
+
+state 8
+	expr:  parenth_expr.    (7)
+
+	.  reduce 7 (src line 67)
+
+
+state 9
+	not_expr:  '~'.expr 
+
+	ATOMIC  shift 3
+	'~'  shift 9
+	'('  shift 10
+	.  error
+
+	expr  goto 14
+	and_expr  goto 4
+	or_expr  goto 5
+	not_expr  goto 7
+	imply_expr  goto 6
+	parenth_expr  goto 8
+
+state 10
+	parenth_expr:  '('.expr ')' 
+
+	ATOMIC  shift 3
+	'~'  shift 9
+	'('  shift 10
+	.  error
+
+	expr  goto 15
+	and_expr  goto 4
+	or_expr  goto 5
+	not_expr  goto 7
+	imply_expr  goto 6
+	parenth_expr  goto 8
+
+state 11
+	and_expr:  expr '&'.expr 
+
+	ATOMIC  shift 3
+	'~'  shift 9
+	'('  shift 10
+	.  error
+
+	expr  goto 16
+	and_expr  goto 4
+	or_expr  goto 5
+	not_expr  goto 7
+	imply_expr  goto 6
+	parenth_expr  goto 8
+
+state 12
+	or_expr:  expr '|'.expr 
+
+	ATOMIC  shift 3
+	'~'  shift 9
+	'('  shift 10
+	.  error
+
+	expr  goto 17
+	and_expr  goto 4
+	or_expr  goto 5
+	not_expr  goto 7
+	imply_expr  goto 6
+	parenth_expr  goto 8
+
+state 13
+	imply_expr:  expr '>'.expr 
+
+	ATOMIC  shift 3
+	'~'  shift 9
+	'('  shift 10
+	.  error
+
+	expr  goto 18
+	and_expr  goto 4
+	or_expr  goto 5
+	not_expr  goto 7
+	imply_expr  goto 6
+	parenth_expr  goto 8
+
+state 14
+	and_expr:  expr.'&' expr 
+	or_expr:  expr.'|' expr 
+	imply_expr:  expr.'>' expr 
+	not_expr:  '~' expr.    (11)
+
+	.  reduce 11 (src line 87)
+
+
+state 15
+	and_expr:  expr.'&' expr 
+	or_expr:  expr.'|' expr 
+	imply_expr:  expr.'>' expr 
+	parenth_expr:  '(' expr.')' 
+
+	'>'  shift 13
+	'&'  shift 11
+	'|'  shift 12
+	')'  shift 19
+	.  error
+
+
+state 16
+	and_expr:  expr.'&' expr 
+	and_expr:  expr '&' expr.    (8)
+	or_expr:  expr.'|' expr 
+	imply_expr:  expr.'>' expr 
+
+	.  reduce 8 (src line 69)
+
+
+state 17
+	and_expr:  expr.'&' expr 
+	or_expr:  expr.'|' expr 
+	or_expr:  expr '|' expr.    (9)
+	imply_expr:  expr.'>' expr 
+
+	.  reduce 9 (src line 75)
+
+
+state 18
+	and_expr:  expr.'&' expr 
+	or_expr:  expr.'|' expr 
+	imply_expr:  expr.'>' expr 
+	imply_expr:  expr '>' expr.    (10)
+
+	'>'  shift 13
+	'&'  shift 11
+	'|'  shift 12
+	.  reduce 10 (src line 81)
+
+
+state 19
+	parenth_expr:  '(' expr ')'.    (12)
+
+	.  reduce 12 (src line 93)
+
+
+10 terminals, 8 nonterminals
+13 grammar rules, 20/8000 states
+0 shift/reduce, 0 reduce/reduce conflicts reported
+57 working sets used
+memory: parser 36/120000
+17 extra closures
+28 shift entries, 1 exceptions
+12 goto entries
+25 entries saved by goto default
+Optimizer space used: output 22/120000
+22 table entries, 0 zero
+maximum spread: 10, maximum offset: 13

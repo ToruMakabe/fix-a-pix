@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ToruMakabe/fix-a-pix/formula"
 	"gonum.org/v1/gonum/stat/combin"
 )
 
@@ -67,20 +68,57 @@ func fix() int {
 			printableCellsTable[i-1][j-1] = append(printableCellsTable[i-1][j-1], s...)
 		}
 	}
-	fmt.Println(printableCellsTable)
 
 	var allCombi [][]int
-	for i, _ := range input {
-		for j, _ := range input[i] {
+	for i := range input {
+		for j := range input[i] {
 			if input[i][j] != -1 {
 				num := input[i][j]
-				printableCells := printableCellsTable[i][j]
-				c := combinations(printableCells, num)
-				allCombi = append(allCombi, c...)
+				if num != 0 {
+					printableCells := printableCellsTable[i][j]
+					c := combinations(printableCells, num)
+					allCombi = append(allCombi, c...)
+				}
+
 			}
 		}
 	}
-	fmt.Println(allCombi)
+
+	var allCombiA [][]string
+	for _, c := range allCombi {
+		var s []string
+		for _, n := range c {
+			s = append(s, strconv.Itoa(n))
+		}
+		allCombiA = append(allCombiA, s)
+	}
+
+	var dnf string
+	for _, c := range allCombiA {
+		dnf += "(" + strings.Join(c, "&") + ")|"
+	}
+	dnf = strings.TrimRight(dnf, "|")
+
+	// 否定標準形(NNF)への変換を行う.
+	nnf, err := formula.ConvNNF(dnf)
+	if err != nil {
+		fmt.Println()
+		printError(err)
+		fmt.Println()
+		fmt.Println(inputFormatMsg)
+		return 1
+	}
+
+	// Tseitin変換を行う.
+	cnfm, err := formula.ConvTseitin(nnf)
+	if err != nil {
+		fmt.Println()
+		printError(err)
+		fmt.Println()
+		fmt.Println(inputFormatMsg)
+		return 1
+	}
+	fmt.Println(cnfm)
 
 	// 処理時間を表示する.
 	et := time.Now()
@@ -139,7 +177,6 @@ func parseProblem(fn /* filename */ string) ([][]int, error) {
 			return nil, fmt.Errorf(inputFormatMsg)
 		}
 	}
-
 	return input, nil
 }
 
