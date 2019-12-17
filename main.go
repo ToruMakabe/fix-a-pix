@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,61 +47,40 @@ func fix() int {
 	}
 	fmt.Println()
 
-	rowLength := len(input[0])
-	rowCounter := len(input)
+	columnCount := len(input[0])
+	rowCount := len(input)
 
-	var paintableCells [][][]int
+	var printableCellsTable [][][]int
 
-	for i := 1; i <= rowCounter; i++ {
-		paintableCells = append(paintableCells, nil)
-		for j := 1; j <= rowLength; j++ {
-			paintableCells[i-1] = append(paintableCells[i-1], nil)
-			s := []int{j + ((i - 1) * rowLength)}
-			switch j {
-			case 1:
-				s = append(s, j+1+((i-1)*rowLength))
-				switch i {
-				case 1:
-					s = append(s, j+1+(i*rowLength))
-				case rowCounter:
-					s = append(s, j+1+((i-2)*rowLength))
-				default:
-					s = append(s, j+1+(i*rowLength), j+1+((i-2)*rowLength))
-				}
-			case rowLength:
-				s = append(s, j-1+((i-1)*rowLength))
-				switch i {
-				case 1:
-					s = append(s, j-1+(i*rowLength))
-				case rowCounter:
-					s = append(s, j-1+((i-2)*rowLength))
-				default:
-					s = append(s, j-1+(i*rowLength), j-1+((i-2)*rowLength))
-				}
-			default:
-				s = append(s, j-1+((i-1)*rowLength), j+1+((i-1)*rowLength))
-				switch i {
-				case 1:
-					s = append(s, j-1+(i*rowLength), j+1+(i*rowLength))
-				case rowCounter:
-					s = append(s, j-1+((i-2)*rowLength), j+1+((i-2)*rowLength))
-				default:
-					s = append(s, j-1+(i*rowLength), j+1+(i*rowLength), j-1+((i-2)*rowLength), j+1+((i-2)*rowLength))
+	for i := 1; i <= rowCount; i++ {
+		printableCellsTable = append(printableCellsTable, nil)
+		for j := 1; j <= columnCount; j++ {
+			printableCellsTable[i-1] = append(printableCellsTable[i-1], nil)
+			var s []int
+			for k := -1; k <= 1; k++ {
+				for l := -1; l <= 1; l++ {
+					if i+k > 0 && j+l > 0 && i+k <= rowCount && j+l <= columnCount {
+						s = append(s, (i-1+k)*(columnCount)+j+l)
+					}
 				}
 			}
-			switch i {
-			case 1:
-				s = append(s, j+((i-1)*rowLength)+rowLength)
-			case rowCounter:
-				s = append(s, j+((i-1)*rowLength)-rowLength)
-			default:
-				s = append(s, j+((i-1)*rowLength)+rowLength, j+((i-1)*rowLength)-rowLength)
-			}
-			paintableCells[i-1][j-1] = append(paintableCells[i-1][j-1], s...)
+			printableCellsTable[i-1][j-1] = append(printableCellsTable[i-1][j-1], s...)
 		}
 	}
+	fmt.Println(printableCellsTable)
 
-	fmt.Println(paintableCells)
+	var allCombi [][]int
+	for i, _ := range input {
+		for j, _ := range input[i] {
+			if input[i][j] != -1 {
+				num := input[i][j]
+				printableCells := printableCellsTable[i][j]
+				c := combinations(printableCells, num)
+				allCombi = append(allCombi, c...)
+			}
+		}
+	}
+	fmt.Println(allCombi)
 
 	// 処理時間を表示する.
 	et := time.Now()
@@ -115,9 +95,9 @@ func convCNF(s /* input */ [][]string) ([][]string, error) {
 }
 
 // parseProblemはfix-a-pixの問題ファイルを受け取り, 形式を検証する.
-func parseProblem(fn /* filename */ string) ([][]string, error) {
+func parseProblem(fn /* filename */ string) ([][]int, error) {
 	re := regexp.MustCompile("[0-9]|.")
-	var input [][]string
+	var input [][]int
 
 	f, err := os.Open(fn)
 	if err != nil {
@@ -130,12 +110,17 @@ func parseProblem(fn /* filename */ string) ([][]string, error) {
 	for scanner.Scan() {
 		l := scanner.Text()
 		c := strings.Split(l, " ")
-		var s []string
+		var s []int
 		for _, n := range c {
 			if !re.MatchString(n) {
 				return nil, fmt.Errorf(inputFormatMsg)
 			}
-			s = append(s, n)
+			if n == "." {
+				s = append(s, -1)
+			} else {
+				i, _ := strconv.Atoi(n)
+				s = append(s, i)
+			}
 		}
 		input = append(input, s)
 	}
@@ -143,13 +128,13 @@ func parseProblem(fn /* filename */ string) ([][]string, error) {
 		return nil, err
 	}
 
-	rowLength := 0
+	columnCount := 0
 	for _, row := range input {
 		if len(row) == 0 {
 			return nil, fmt.Errorf(inputFormatMsg)
 		}
-		if rowLength == 0 || rowLength == len(row) {
-			rowLength = len(row)
+		if columnCount == 0 || columnCount == len(row) {
+			columnCount = len(row)
 		} else {
 			return nil, fmt.Errorf(inputFormatMsg)
 		}
@@ -158,15 +143,18 @@ func parseProblem(fn /* filename */ string) ([][]string, error) {
 	return input, nil
 }
 
-// combinationsはスライス要素の組み合わせ(nC2)を作り, かつ否定の選言を表現するため各要素を負数に変換する.
-func combinations(s /* slice */ []int) [][]int {
-	var r [][]int
-	cs := combin.Combinations(len(s), 2)
+// combinationsはスライス要素の組み合わせ(nCk)を作る.
+func combinations(s /* slice */ []int, k /* k-combination */ int) [][]int {
+	var rs [][]int
+	cs := combin.Combinations(len(s), k)
 	for _, c := range cs {
-		t := []int{-s[c[0]], -s[c[1]]}
-		r = append(r, t)
+		var r []int
+		for _, n := range c {
+			r = append(r, s[n])
+		}
+		rs = append(rs, r)
 	}
-	return r
+	return rs
 }
 
 // flagUsageはコマンドラインオプション(フラグ)の使い方を出力する.
