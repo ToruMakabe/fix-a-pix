@@ -46,6 +46,62 @@ func fix() int {
 	}
 	fmt.Println()
 
+	rowLength := len(input[0])
+	rowCounter := len(input)
+
+	var paintableCells [][][]int
+
+	for i := 1; i <= rowCounter; i++ {
+		paintableCells = append(paintableCells, nil)
+		for j := 1; j <= rowLength; j++ {
+			paintableCells[i-1] = append(paintableCells[i-1], nil)
+			s := []int{j + ((i - 1) * rowLength)}
+			switch j {
+			case 1:
+				s = append(s, j+1+((i-1)*rowLength))
+				switch i {
+				case 1:
+					s = append(s, j+1+(i*rowLength))
+				case rowCounter:
+					s = append(s, j+1+((i-2)*rowLength))
+				default:
+					s = append(s, j+1+(i*rowLength), j+1+((i-2)*rowLength))
+				}
+			case rowLength:
+				s = append(s, j-1+((i-1)*rowLength))
+				switch i {
+				case 1:
+					s = append(s, j-1+(i*rowLength))
+				case rowCounter:
+					s = append(s, j-1+((i-2)*rowLength))
+				default:
+					s = append(s, j-1+(i*rowLength), j-1+((i-2)*rowLength))
+				}
+			default:
+				s = append(s, j-1+((i-1)*rowLength), j+1+((i-1)*rowLength))
+				switch i {
+				case 1:
+					s = append(s, j-1+(i*rowLength), j+1+(i*rowLength))
+				case rowCounter:
+					s = append(s, j-1+((i-2)*rowLength), j+1+((i-2)*rowLength))
+				default:
+					s = append(s, j-1+(i*rowLength), j+1+(i*rowLength), j-1+((i-2)*rowLength), j+1+((i-2)*rowLength))
+				}
+			}
+			switch i {
+			case 1:
+				s = append(s, j+((i-1)*rowLength)+rowLength)
+			case rowCounter:
+				s = append(s, j+((i-1)*rowLength)-rowLength)
+			default:
+				s = append(s, j+((i-1)*rowLength)+rowLength, j+((i-1)*rowLength)-rowLength)
+			}
+			paintableCells[i-1][j-1] = append(paintableCells[i-1][j-1], s...)
+		}
+	}
+
+	fmt.Println(paintableCells)
+
 	// 処理時間を表示する.
 	et := time.Now()
 	fmt.Println("Time: ", et.Sub(st))
