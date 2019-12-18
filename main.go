@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -54,7 +56,6 @@ func fix() int {
 	rowCount := len(input)
 
 	var printableCellsTable [][][]int
-
 	for i := 1; i <= rowCount; i++ {
 		printableCellsTable = append(printableCellsTable, nil)
 		for j := 1; j <= columnCount; j++ {
@@ -78,8 +79,20 @@ func fix() int {
 				num := input[i][j]
 				if num != 0 {
 					printableCells := printableCellsTable[i][j]
+					if len(printableCells) < num {
+						printError(fmt.Errorf(inputFormatMsg))
+						return 1
+					}
 					c := combinations(printableCells, num)
 					allCombi = append(allCombi, c...)
+				} else {
+					printableCells := printableCellsTable[i][j]
+					c := combinations(printableCells, len(printableCells))
+					var s []int
+					for _, m := range c[0] {
+						s = append(s, -m)
+					}
+					allCombi = append(allCombi, s)
 				}
 
 			}
@@ -90,7 +103,13 @@ func fix() int {
 	for _, c := range allCombi {
 		var s []string
 		for _, n := range c {
-			s = append(s, strconv.Itoa(n))
+			if n < 0 {
+				v := "~" + strconv.Itoa(int(math.Abs(float64(n))))
+				s = append(s, v)
+
+			} else {
+				s = append(s, strconv.Itoa(n))
+			}
 		}
 		allCombiA = append(allCombiA, s)
 	}
@@ -167,6 +186,17 @@ func fix() int {
 	if !r {
 		return 0
 	}
+	as := s.Assignments()
+	fmt.Println(as)
+
+	// 真の要素を選び, ソートする.
+	var keys []int
+	for k, a := range as {
+		if a {
+			keys = append(keys, k)
+		}
+	}
+	sort.Ints(keys)
 
 	// 処理時間を表示する.
 	et := time.Now()
