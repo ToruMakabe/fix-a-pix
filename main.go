@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/ToruMakabe/fix-a-pix/formula"
+	"github.com/mitchellh/go-sat"
+	gosatcnf "github.com/mitchellh/go-sat/cnf"
 	"gonum.org/v1/gonum/stat/combin"
 )
 
@@ -110,7 +112,7 @@ func fix() int {
 	}
 
 	// Tseitin変換を行う.
-	cnfm, err := formula.ConvTseitin(nnf)
+	cnf, err := formula.ConvTseitin(nnf)
 	if err != nil {
 		fmt.Println()
 		printError(err)
@@ -118,7 +120,53 @@ func fix() int {
 		fmt.Println(inputFormatMsg)
 		return 1
 	}
-	fmt.Println(cnfm)
+	//	fmt.Println(cnf)
+
+	// go-sat形式に変換する.
+	offSet := rowCount * columnCount
+
+	var ncnf [][]int
+	for _, c := range cnf {
+		var nc []int
+		for _, l := range c {
+			if strings.HasPrefix(l, "~x") {
+				i, _ := strconv.Atoi(strings.TrimLeft(l, "~x"))
+				v := i + offSet
+				nc = append(nc, -v)
+				continue
+			}
+			if strings.HasPrefix(l, "x") {
+				i, _ := strconv.Atoi(strings.TrimLeft(l, "x"))
+				v := i + offSet
+				nc = append(nc, v)
+				continue
+			}
+			if strings.HasPrefix(l, "~") {
+				i, _ := strconv.Atoi(strings.TrimLeft(l, "~"))
+				nc = append(nc, -i)
+				continue
+			}
+			i, _ := strconv.Atoi(l)
+			v := i
+			nc = append(nc, v)
+		}
+		ncnf = append(ncnf, nc)
+	}
+
+	// CNFの大きさ(節数)を表示する.
+	fmt.Printf("Number of generated CNF clauses: %v\n", len(ncnf))
+
+	// 充足可否と付値を取得する.
+	// SATソルバーにはMITライセンスで公開されている go-sat を利用する(https://github.com/mitchellh/go-sat)
+	formula := gosatcnf.NewFormulaFromInts(ncnf)
+	s := sat.New()
+	s.AddFormula(formula)
+	r := s.Solve()
+	fmt.Printf("SAT: %v\n", r)
+	fmt.Println()
+	if !r {
+		return 0
+	}
 
 	// 処理時間を表示する.
 	et := time.Now()
