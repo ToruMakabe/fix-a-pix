@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"math"
+	//	"math"
 	"os"
 	"regexp"
 	"sort"
@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ToruMakabe/fix-a-pix/formula"
+	//	"github.com/ToruMakabe/fix-a-pix/formula"
 	"github.com/mitchellh/go-sat"
 	gosatcnf "github.com/mitchellh/go-sat/cnf"
 	"gonum.org/v1/gonum/stat/combin"
@@ -79,13 +79,12 @@ func fix() int {
 				num := input[i][j]
 				if num != 0 {
 					printableCells := printableCellsTable[i][j]
-					if len(printableCells) < num {
-						printError(fmt.Errorf(inputFormatMsg))
-						return 1
+					if len(printableCells) <= num {
+						num = len(printableCells)
 					}
 					c := combinations(printableCells, num)
 					allCombi = append(allCombi, c...)
-				} else {
+				} /*else {
 					printableCells := printableCellsTable[i][j]
 					c := combinations(printableCells, len(printableCells))
 					var s []int
@@ -93,84 +92,107 @@ func fix() int {
 						s = append(s, -m)
 					}
 					allCombi = append(allCombi, s)
-				}
+				} */
 
 			}
 		}
 	}
 
-	var allCombiA [][]string
-	for _, c := range allCombi {
-		var s []string
-		for _, n := range c {
-			if n < 0 {
-				v := "~" + strconv.Itoa(int(math.Abs(float64(n))))
-				s = append(s, v)
-
-			} else {
-				s = append(s, strconv.Itoa(n))
-			}
-		}
-		allCombiA = append(allCombiA, s)
-	}
-
-	var dnf string
-	for _, c := range allCombiA {
-		dnf += "(" + strings.Join(c, "&") + ")|"
-	}
-	dnf = strings.TrimRight(dnf, "|")
-
-	// 否定標準形(NNF)への変換を行う.
-	nnf, err := formula.ConvNNF(dnf)
-	if err != nil {
-		fmt.Println()
-		printError(err)
-		fmt.Println()
-		fmt.Println(inputFormatMsg)
-		return 1
-	}
-
-	// Tseitin変換を行う.
-	cnf, err := formula.ConvTseitin(nnf)
-	if err != nil {
-		fmt.Println()
-		printError(err)
-		fmt.Println()
-		fmt.Println(inputFormatMsg)
-		return 1
-	}
-	//	fmt.Println(cnf)
-
-	// go-sat形式に変換する.
-	offSet := rowCount * columnCount
-
+	offSet := rowCount*columnCount + 1
 	var ncnf [][]int
-	for _, c := range cnf {
-		var nc []int
-		for _, l := range c {
-			if strings.HasPrefix(l, "~x") {
-				i, _ := strconv.Atoi(strings.TrimLeft(l, "~x"))
-				v := i + offSet
-				nc = append(nc, -v)
-				continue
-			}
-			if strings.HasPrefix(l, "x") {
-				i, _ := strconv.Atoi(strings.TrimLeft(l, "x"))
-				v := i + offSet
-				nc = append(nc, v)
-				continue
-			}
-			if strings.HasPrefix(l, "~") {
-				i, _ := strconv.Atoi(strings.TrimLeft(l, "~"))
-				nc = append(nc, -i)
-				continue
-			}
-			i, _ := strconv.Atoi(l)
-			v := i
-			nc = append(nc, v)
+	var fvs []int
+	for i, c := range allCombi {
+		if len(c) == 1 {
+			fmt.Println(c)
 		}
-		ncnf = append(ncnf, nc)
+		fv := offSet + i
+		fvs = append(fvs, fv)
+		var nc [][]int
+		for _, j := range c {
+			nc = append(nc, []int{-fv, j})
+		}
+		ncnf = append(ncnf, nc...)
 	}
+	ncnf = append(ncnf, fvs)
+
+	/*
+		var allCombiA [][]string
+		for _, c := range allCombi {
+			var s []string
+			for _, n := range c {
+				if n < 0 {
+					v := "~" + strconv.Itoa(int(math.Abs(float64(n))))
+					s = append(s, v)
+
+				} else {
+					s = append(s, strconv.Itoa(n))
+				}
+			}
+			allCombiA = append(allCombiA, s)
+		}
+
+		var dnf string
+		for _, c := range allCombiA {
+			dnf += "(" + strings.Join(c, "&") + ")|"
+		}
+		dnf = strings.TrimRight(dnf, "|")
+		fmt.Println(dnf)
+
+		// 否定標準形(NNF)への変換を行う.
+		nnf, err := formula.ConvNNF(dnf)
+		if err != nil {
+			fmt.Println()
+			printError(err)
+			fmt.Println()
+			fmt.Println(inputFormatMsg)
+			return 1
+		}
+		fmt.Println(nnf)
+
+		// Tseitin変換を行う.
+		cnf, err := formula.ConvTseitin(nnf)
+		if err != nil {
+			fmt.Println()
+			printError(err)
+			fmt.Println()
+			fmt.Println(inputFormatMsg)
+			return 1
+		}
+		fmt.Println(cnf)
+
+		// go-sat形式に変換する.
+		offSet := rowCount * columnCount
+
+		var ncnf [][]int
+		for _, c := range cnf {
+			var nc []int
+			for _, l := range c {
+				if strings.HasPrefix(l, "~x") {
+					i, _ := strconv.Atoi(strings.TrimLeft(l, "~x"))
+					v := i + offSet
+					nc = append(nc, -v)
+					continue
+				}
+				if strings.HasPrefix(l, "x") {
+					i, _ := strconv.Atoi(strings.TrimLeft(l, "x"))
+					v := i + offSet
+					nc = append(nc, v)
+					continue
+				}
+				if strings.HasPrefix(l, "~") {
+					i, _ := strconv.Atoi(strings.TrimLeft(l, "~"))
+					nc = append(nc, -i)
+					continue
+				}
+				i, _ := strconv.Atoi(l)
+				v := i
+				nc = append(nc, v)
+			}
+			ncnf = append(ncnf, nc)
+		}
+		fmt.Println(ncnf)
+
+	*/
 
 	// CNFの大きさ(節数)を表示する.
 	fmt.Printf("Number of generated CNF clauses: %v\n", len(ncnf))
@@ -187,7 +209,6 @@ func fix() int {
 		return 0
 	}
 	as := s.Assignments()
-	fmt.Println(as)
 
 	// 真の要素を選び, ソートする.
 	var keys []int
@@ -197,6 +218,7 @@ func fix() int {
 		}
 	}
 	sort.Ints(keys)
+	fmt.Println(keys)
 
 	// 処理時間を表示する.
 	et := time.Now()
@@ -205,14 +227,9 @@ func fix() int {
 	return 0
 }
 
-// convCNFは入力された問題をCNFに変換する.
-func convCNF(s /* input */ [][]string) ([][]string, error) {
-	return s, nil
-}
-
 // parseProblemはfix-a-pixの問題ファイルを受け取り, 形式を検証する.
 func parseProblem(fn /* filename */ string) ([][]int, error) {
-	re := regexp.MustCompile("[0-9]|.")
+	re := regexp.MustCompile("^-1|^[0-9]")
 	var input [][]int
 
 	f, err := os.Open(fn)
@@ -231,7 +248,7 @@ func parseProblem(fn /* filename */ string) ([][]int, error) {
 			if !re.MatchString(n) {
 				return nil, fmt.Errorf(inputFormatMsg)
 			}
-			if n == "." {
+			if n == "-1" {
 				s = append(s, -1)
 			} else {
 				i, _ := strconv.Atoi(n)
@@ -264,8 +281,15 @@ func combinations(s /* slice */ []int, k /* k-combination */ int) [][]int {
 	cs := combin.Combinations(len(s), k)
 	for _, c := range cs {
 		var r []int
-		for _, n := range c {
-			r = append(r, s[n])
+		for _, v := range s {
+			for _, n := range c {
+				if v == s[n] {
+					r = append(r, s[n])
+					goto loopBottom
+				}
+			}
+			r = append(r, -v)
+		loopBottom:
 		}
 		rs = append(rs, r)
 	}
