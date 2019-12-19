@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+
 	//	"math"
 	"os"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -72,48 +72,53 @@ func fix() int {
 		}
 	}
 
-	var allCombi [][]int
+	var allCombi [][][]int
 	for i := range input {
 		for j := range input[i] {
 			if input[i][j] != -1 {
 				num := input[i][j]
-				if num != 0 {
-					printableCells := printableCellsTable[i][j]
-					if len(printableCells) <= num {
-						num = len(printableCells)
-					}
-					c := combinations(printableCells, num)
-					allCombi = append(allCombi, c...)
-				} /*else {
-					printableCells := printableCellsTable[i][j]
-					c := combinations(printableCells, len(printableCells))
-					var s []int
-					for _, m := range c[0] {
-						s = append(s, -m)
-					}
-					allCombi = append(allCombi, s)
-				} */
+				printableCells := printableCellsTable[i][j]
+				if len(printableCells) <= num {
+					num = len(printableCells)
+				}
+				c := combinations(printableCells, num)
 
+				if len(c) == 1 {
+					var r [][]int
+					for _, v := range c[0] {
+						r = append(r, []int{v})
+					}
+					allCombi = append(allCombi, r)
+				} else {
+					allCombi = append(allCombi, c)
+				}
 			}
 		}
 	}
 
-	offSet := rowCount*columnCount + 1
+	fv := rowCount * columnCount
 	var ncnf [][]int
-	var fvs []int
-	for i, c := range allCombi {
-		if len(c) == 1 {
-			fmt.Println(c)
+	for _, c := range allCombi {
+		var fvs []int
+		if len(c[0]) == 1 {
+			for _, i := range c {
+				ncnf = append(ncnf, i)
+			}
+			continue
+		} else {
+			for _, i := range c {
+				fv++
+				fvs = append(fvs, fv)
+				var nc [][]int
+				for _, j := range i {
+					v := []int{-fv, j}
+					nc = append(nc, v)
+				}
+				ncnf = append(ncnf, nc...)
+			}
 		}
-		fv := offSet + i
-		fvs = append(fvs, fv)
-		var nc [][]int
-		for _, j := range c {
-			nc = append(nc, []int{-fv, j})
-		}
-		ncnf = append(ncnf, nc...)
+		ncnf = append(ncnf, fvs)
 	}
-	ncnf = append(ncnf, fvs)
 
 	/*
 		var allCombiA [][]string
@@ -161,7 +166,7 @@ func fix() int {
 		fmt.Println(cnf)
 
 		// go-sat形式に変換する.
-		offSet := rowCount * columnCount
+		offset := rowCount * columnCount
 
 		var ncnf [][]int
 		for _, c := range cnf {
@@ -169,13 +174,13 @@ func fix() int {
 			for _, l := range c {
 				if strings.HasPrefix(l, "~x") {
 					i, _ := strconv.Atoi(strings.TrimLeft(l, "~x"))
-					v := i + offSet
+					v := i + offset
 					nc = append(nc, -v)
 					continue
 				}
 				if strings.HasPrefix(l, "x") {
 					i, _ := strconv.Atoi(strings.TrimLeft(l, "x"))
-					v := i + offSet
+					v := i + offset
 					nc = append(nc, v)
 					continue
 				}
@@ -210,15 +215,27 @@ func fix() int {
 	}
 	as := s.Assignments()
 
-	// 真の要素を選び, ソートする.
-	var keys []int
-	for k, a := range as {
-		if a {
-			keys = append(keys, k)
+	/*
+		// 真の要素を選び, ソートする.
+		var keys []int
+		for k, a := range as {
+			if a {
+				keys = append(keys, k)
+			}
 		}
+		sort.Ints(keys)
+	*/
+
+	for i := 1; i <= rowCount; i++ {
+		for j := 1; j <= columnCount; j++ {
+			if as[(i-1)*rowCount+j] {
+				fmt.Print("#")
+			} else {
+				fmt.Print(" ")
+			}
+		}
+		fmt.Println()
 	}
-	sort.Ints(keys)
-	fmt.Println(keys)
 
 	// 処理時間を表示する.
 	et := time.Now()
