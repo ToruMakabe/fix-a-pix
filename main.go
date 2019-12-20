@@ -96,13 +96,14 @@ func fix() int {
 		}
 	}
 
+	// Tseitin変換を行う. 入力形式が限定でき, NNF化や二重否定の除去など不要なため, 簡易的な実装とする.
 	fv := rowCount * columnCount
-	var ncnf [][]int
+	var cnf [][]int
 	for _, c := range allCombi {
 		var fvs []int
 		if len(c[0]) == 1 {
 			for _, i := range c {
-				ncnf = append(ncnf, i)
+				cnf = append(cnf, i)
 			}
 			continue
 		} else {
@@ -114,97 +115,18 @@ func fix() int {
 					v := []int{-fv, j}
 					nc = append(nc, v)
 				}
-				ncnf = append(ncnf, nc...)
+				cnf = append(cnf, nc...)
 			}
 		}
-		ncnf = append(ncnf, fvs)
+		cnf = append(cnf, fvs)
 	}
 
-	/*
-		var allCombiA [][]string
-		for _, c := range allCombi {
-			var s []string
-			for _, n := range c {
-				if n < 0 {
-					v := "~" + strconv.Itoa(int(math.Abs(float64(n))))
-					s = append(s, v)
-
-				} else {
-					s = append(s, strconv.Itoa(n))
-				}
-			}
-			allCombiA = append(allCombiA, s)
-		}
-
-		var dnf string
-		for _, c := range allCombiA {
-			dnf += "(" + strings.Join(c, "&") + ")|"
-		}
-		dnf = strings.TrimRight(dnf, "|")
-		fmt.Println(dnf)
-
-		// 否定標準形(NNF)への変換を行う.
-		nnf, err := formula.ConvNNF(dnf)
-		if err != nil {
-			fmt.Println()
-			printError(err)
-			fmt.Println()
-			fmt.Println(inputFormatMsg)
-			return 1
-		}
-		fmt.Println(nnf)
-
-		// Tseitin変換を行う.
-		cnf, err := formula.ConvTseitin(nnf)
-		if err != nil {
-			fmt.Println()
-			printError(err)
-			fmt.Println()
-			fmt.Println(inputFormatMsg)
-			return 1
-		}
-		fmt.Println(cnf)
-
-		// go-sat形式に変換する.
-		offset := rowCount * columnCount
-
-		var ncnf [][]int
-		for _, c := range cnf {
-			var nc []int
-			for _, l := range c {
-				if strings.HasPrefix(l, "~x") {
-					i, _ := strconv.Atoi(strings.TrimLeft(l, "~x"))
-					v := i + offset
-					nc = append(nc, -v)
-					continue
-				}
-				if strings.HasPrefix(l, "x") {
-					i, _ := strconv.Atoi(strings.TrimLeft(l, "x"))
-					v := i + offset
-					nc = append(nc, v)
-					continue
-				}
-				if strings.HasPrefix(l, "~") {
-					i, _ := strconv.Atoi(strings.TrimLeft(l, "~"))
-					nc = append(nc, -i)
-					continue
-				}
-				i, _ := strconv.Atoi(l)
-				v := i
-				nc = append(nc, v)
-			}
-			ncnf = append(ncnf, nc)
-		}
-		fmt.Println(ncnf)
-
-	*/
-
 	// CNFの大きさ(節数)を表示する.
-	fmt.Printf("Number of generated CNF clauses: %v\n", len(ncnf))
+	fmt.Printf("Number of generated CNF clauses: %v\n", len(cnf))
 
 	// 充足可否と付値を取得する.
 	// SATソルバーにはMITライセンスで公開されている go-sat を利用する(https://github.com/mitchellh/go-sat)
-	formula := gosatcnf.NewFormulaFromInts(ncnf)
+	formula := gosatcnf.NewFormulaFromInts(cnf)
 	s := sat.New()
 	s.AddFormula(formula)
 	r := s.Solve()
@@ -215,26 +137,35 @@ func fix() int {
 	}
 	as := s.Assignments()
 
-	/*
-		// 真の要素を選び, ソートする.
-		var keys []int
-		for k, a := range as {
-			if a {
-				keys = append(keys, k)
-			}
-		}
-		sort.Ints(keys)
-	*/
+	filename := "sol-" + args[0]
+	output, err := os.Create(filename)
+	if err != nil {
+		printError(err)
+		return 1
+	}
+	defer output.Close()
 
 	for i := 1; i <= rowCount; i++ {
 		for j := 1; j <= columnCount; j++ {
 			if as[(i-1)*rowCount+j] {
-				fmt.Print("#")
+				_, err := output.Write([]byte("#"))
+				if err != nil {
+					printError(err)
+					return 1
+				}
 			} else {
-				fmt.Print(" ")
+				_, err := output.Write([]byte(" "))
+				if err != nil {
+					printError(err)
+					return 1
+				}
 			}
 		}
-		fmt.Println()
+		_, err := output.Write([]byte("\n"))
+		if err != nil {
+			printError(err)
+			return 1
+		}
 	}
 
 	// 処理時間を表示する.
