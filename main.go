@@ -4,21 +4,19 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-
-	//	"math"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	//	"github.com/ToruMakabe/fix-a-pix/formula"
 	"github.com/mitchellh/go-sat"
 	gosatcnf "github.com/mitchellh/go-sat/cnf"
 	"gonum.org/v1/gonum/stat/combin"
 )
 
-const inputFormatMsg = "Please input \".\" or 1-9. \".\" is empty as Fix-a-Pix cell."
+const inputFormatMsg = "Please input -1 or 0-9. A non-negative number means the number of surrounding boxes, and -1 means not specified. Like this\n-1 2 3 -1 -1 0 -1 -1 -1 -1\n-1 -1 -1 -1 3 -1 2 -1 -1 6\n-1 -1 5 -1 5 3 -1 5 7 4\n-1 4 -1 5 -1 5 -1 6 -1 3\n-1 -1 4 -1 5 -1 6 -1 -1 3\n-1 -1 -1 2 -1 5 -1 -1 -1 -1\n4 -1 1 -1 -1 -1 1 1 -1 -1\n4 -1 1 -1 -1 -1 1 -1 4 -1\n-1 -1 -1 -1 6 -1 -1 -1 -1 4\n-1 4 4 -1 -1 -1 -1 4 -1 -1\n"
 
 // fixは実質的な主処理である.
 func fix() int {
@@ -52,9 +50,11 @@ func fix() int {
 	}
 	fmt.Println()
 
+	// 入力データの行, 列サイズを取得する.
 	columnCount := len(input[0])
 	rowCount := len(input)
 
+	// 端や角を考慮し, 塗ることができるセルの番号をまとめた表を作る.
 	var printableCellsTable [][][]int
 	for i := 1; i <= rowCount; i++ {
 		printableCellsTable = append(printableCellsTable, nil)
@@ -72,6 +72,7 @@ func fix() int {
 		}
 	}
 
+	// 入力データを元に, 塗ることができるセルの全ての組み合わせを取得する.
 	var allCombi [][][]int
 	for i := range input {
 		for j := range input[i] {
@@ -83,6 +84,7 @@ func fix() int {
 				}
 				c := combinations(printableCells, num)
 
+				// 組み合わせが1つ(全て正か負)であれば, 塗るか塗らないかが確定する.
 				if len(c) == 1 {
 					var r [][]int
 					for _, v := range c[0] {
@@ -96,7 +98,7 @@ func fix() int {
 		}
 	}
 
-	// Tseitin変換を行う. 入力形式が限定でき, NNF化や二重否定の除去など不要なため, 簡易的な実装とする.
+	// Tseitin変換を行う. 入力形式を限定できるため, 簡易な実装とする.
 	fv := rowCount * columnCount
 	var cnf [][]int
 	for _, c := range allCombi {
@@ -130,14 +132,12 @@ func fix() int {
 	s := sat.New()
 	s.AddFormula(formula)
 	r := s.Solve()
+
 	fmt.Printf("SAT: %v\n", r)
-	fmt.Println()
-	if !r {
-		return 0
-	}
 	as := s.Assignments()
 
-	filename := "sol-" + args[0]
+	// 結果は端末の表示幅に収まらない可能性があるため, ファイルに出力する.
+	filename := "sol-" + filepath.Base(args[0])
 	output, err := os.Create(filename)
 	if err != nil {
 		printError(err)
@@ -145,16 +145,17 @@ func fix() int {
 	}
 	defer output.Close()
 
+	// 行, 列方向に走査し, 対応する変数の真偽をもとにセルを塗るか塗らないかを判断する. 見栄えを考慮してセル幅は2とする.
 	for i := 1; i <= rowCount; i++ {
 		for j := 1; j <= columnCount; j++ {
-			if as[(i-1)*rowCount+j] {
-				_, err := output.Write([]byte("#"))
+			if as[(i-1)*columnCount+j] {
+				_, err := output.Write([]byte("  "))
 				if err != nil {
 					printError(err)
 					return 1
 				}
 			} else {
-				_, err := output.Write([]byte(" "))
+				_, err := output.Write([]byte("##"))
 				if err != nil {
 					printError(err)
 					return 1
@@ -223,7 +224,7 @@ func parseProblem(fn /* filename */ string) ([][]int, error) {
 	return input, nil
 }
 
-// combinationsはスライス要素の組み合わせ(nCk)を作る.
+// combinationsはスライス要素の組み合わせ(nCk)を作る. 組み合わせに含まれない変数は負数とする.
 func combinations(s /* slice */ []int, k /* k-combination */ int) [][]int {
 	var rs [][]int
 	cs := combin.Combinations(len(s), k)
