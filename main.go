@@ -30,15 +30,15 @@ func fix() int {
 		return 1
 	}
 
+	// 以降を処理時間の計測対象とする.
+	st := time.Now()
+
 	// 入力ファイルをパースし, 形式を検証する.
 	input, err := parseProblem(args[0])
 	if err != nil {
 		printError(err)
 		return 1
 	}
-
-	// 以降を処理時間の計測対象とする.
-	st := time.Now()
 
 	// パースされた問題を表示する.
 	fmt.Println("[Input problem]")
